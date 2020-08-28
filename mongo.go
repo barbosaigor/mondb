@@ -48,25 +48,25 @@ func NewWithQueryTimeout(dbName, collection string, queryTimeout int) *Mongo {
 }
 
 // Conn creates a connection to database
-func (d *Mongo) Conn(url string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.QueryTimeout*2)*time.Second)
+func (mg *Mongo) Conn(url string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(mg.QueryTimeout*2)*time.Second)
 	defer cancel()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(url))
 	if err != nil {
 		return err
 	}
-	d.client = client
-	ctxPing, cancelPing := context.WithTimeout(context.Background(), time.Duration(d.QueryTimeout*2)*time.Second)
+	mg.client = client
+	ctxPing, cancelPing := context.WithTimeout(context.Background(), time.Duration(mg.QueryTimeout*2)*time.Second)
 	defer cancelPing()
 	err = client.Ping(ctxPing, readpref.Primary())
 	return err
 }
 
 // Discn closes the connection to database
-func (d *Mongo) Discn() {
-	if d.client != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.QueryTimeout)*time.Second)
-		d.client.Disconnect(ctx)
+func (mg *Mongo) Discn() {
+	if mg.client != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(mg.QueryTimeout)*time.Second)
+		mg.client.Disconnect(ctx)
 		cancel()
 	}
 }
@@ -85,12 +85,12 @@ func primitiveToBuiltin(value map[string]interface{}) {
 // FindOne using a filter find a document that matches the filter.
 // If filter has _id param, then _id is converted to mongo Object ID,
 // it must be in hexdecimal format.
-func (d *Mongo) FindOne(filter map[string]interface{}) (map[string]interface{}, error) {
-	if d.client == nil {
+func (mg *Mongo) FindOne(filter map[string]interface{}) (map[string]interface{}, error) {
+	if mg.client == nil {
 		return nil, ErrDBNotConnected
 	}
-	collection := d.client.Database(d.Name).Collection(d.Collection)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.QueryTimeout)*time.Second)
+	collection := mg.client.Database(mg.Name).Collection(mg.Collection)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(mg.QueryTimeout)*time.Second)
 	defer cancel()
 	var res map[string]interface{}
 	if id, ok := filter["_id"]; ok {
@@ -111,18 +111,18 @@ func (d *Mongo) FindOne(filter map[string]interface{}) (map[string]interface{}, 
 }
 
 // FindMany using a filter finds all matching documents
-func (d *Mongo) FindMany(filter map[string]interface{}) ([]map[string]interface{}, error) {
-	if d.client == nil {
+func (mg *Mongo) FindMany(filter map[string]interface{}) ([]map[string]interface{}, error) {
+	if mg.client == nil {
 		return nil, ErrDBNotConnected
 	}
-	collection := d.client.Database(d.Name).Collection(d.Collection)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.QueryTimeout)*time.Second)
+	collection := mg.client.Database(mg.Name).Collection(mg.Collection)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(mg.QueryTimeout)*time.Second)
 	defer cancel()
 	cursor, err := collection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancelCursorAll := context.WithTimeout(context.Background(), time.Duration(d.QueryTimeout)*time.Second)
+	ctx, cancelCursorAll := context.WithTimeout(context.Background(), time.Duration(mg.QueryTimeout)*time.Second)
 	defer cancelCursorAll()
 	var res []map[string]interface{}
 	if err := cursor.All(ctx, &res); err == mongo.ErrNoDocuments || res == nil {
@@ -141,15 +141,15 @@ func (d *Mongo) FindMany(filter map[string]interface{}) ([]map[string]interface{
 // InsertOne inserts a new document to the database
 // If obj has _id param, then _id is converted to mongo Object ID,
 // it must be in hexdecimal format.
-func (d *Mongo) InsertOne(obj map[string]interface{}) error {
-	if d.client == nil {
+func (mg *Mongo) InsertOne(obj map[string]interface{}) error {
+	if mg.client == nil {
 		return ErrDBNotConnected
 	}
 	if obj == nil {
 		return ErrEmptyObject
 	}
-	collection := d.client.Database(d.Name).Collection(d.Collection)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.QueryTimeout)*time.Second)
+	collection := mg.client.Database(mg.Name).Collection(mg.Collection)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(mg.QueryTimeout)*time.Second)
 	defer cancel()
 	if id, ok := obj["_id"]; ok {
 		objID, err := primitive.ObjectIDFromHex(id.(string))
@@ -167,8 +167,8 @@ func (d *Mongo) InsertOne(obj map[string]interface{}) error {
 // UpdateOne updates an existing document in the database
 // If obj has _id param, then _id is converted to mongo Object ID,
 // it must be in hexdecimal format.
-func (d *Mongo) UpdateOne(filter map[string]interface{}, obj map[string]interface{}) (bool, error) {
-	if d.client == nil {
+func (mg *Mongo) UpdateOne(filter map[string]interface{}, obj map[string]interface{}) (bool, error) {
+	if mg.client == nil {
 		return false, ErrDBNotConnected
 	}
 	if obj == nil {
@@ -188,8 +188,8 @@ func (d *Mongo) UpdateOne(filter map[string]interface{}, obj map[string]interfac
 		}
 		obj["_id"] = objID
 	}
-	collection := d.client.Database(d.Name).Collection(d.Collection)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.QueryTimeout)*time.Second)
+	collection := mg.client.Database(mg.Name).Collection(mg.Collection)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(mg.QueryTimeout)*time.Second)
 	defer cancel()
 	result, err := collection.UpdateOne(
 		ctx,
@@ -202,8 +202,8 @@ func (d *Mongo) UpdateOne(filter map[string]interface{}, obj map[string]interfac
 }
 
 // DeleteOne deletes a document
-func (d *Mongo) DeleteOne(filter map[string]interface{}) (bool, error) {
-	if d.client == nil {
+func (mg *Mongo) DeleteOne(filter map[string]interface{}) (bool, error) {
+	if mg.client == nil {
 		return false, ErrDBNotConnected
 	}
 	if id, ok := filter["_id"]; ok {
@@ -213,8 +213,8 @@ func (d *Mongo) DeleteOne(filter map[string]interface{}) (bool, error) {
 		}
 		filter["_id"] = objID
 	}
-	collection := d.client.Database(d.Name).Collection(d.Collection)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.QueryTimeout)*time.Second)
+	collection := mg.client.Database(mg.Name).Collection(mg.Collection)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(mg.QueryTimeout)*time.Second)
 	defer cancel()
 	result, err := collection.DeleteOne(ctx, filter)
 	return result.DeletedCount > 0, err
