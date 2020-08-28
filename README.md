@@ -1,5 +1,5 @@
 # MonDB
-MonDB library defines an interface for mongodb driver.  
+MonDB defines an interface for mongodb driver.  
 It makes it easy to operate the database only with Go native types.  
 
 # Installation
@@ -11,7 +11,7 @@ go get github.com/barbosaigor/mondb
 The user must make a connection to database and after all close it.  
 ```golang
 db := New("dealership", "cars")
-if err := db.Conn(DefaultMongoURL); err != nil {
+if err := db.Conn("mongodb://your-mongo-cluster:27017"); err != nil {
     // ...
 }
 defer db.Discn()
@@ -58,4 +58,4 @@ filter := map[string]interface{}{"name": "The car"}
 wasDeleted, err := db.DeleteOne(filter)
 ```  
 
-For more information check out [documentation](https://pkg.go.dev/github.com/barbosaigor).  
+For more information check out [documentation](https://pkg.go.dev/github.com/barbosaigor/mondb).  
